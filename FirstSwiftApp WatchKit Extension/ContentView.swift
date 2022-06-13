@@ -6,6 +6,9 @@
 //
 
 import SwiftUI
+import UIKit
+
+let url = "https://meme-api.herokuapp.com/gimme/1"
 
 struct Memeslist:Codable{
     let postLink: String
@@ -15,7 +18,7 @@ struct Memeslist:Codable{
     let nsfw: Bool
     let spoiler: Bool
     let author: String
-    let ups: Bool
+    let ups: Int
     let preview: Array<String>
 }
 
@@ -25,44 +28,45 @@ struct Meme:Codable{
 }
 
 struct ContentView: View {
-    @State var incr:Int = 0
     @State var testText:String = ""
+    @State var memeUrl:String = ""
     
-    func decodeAPI(){
-        guard let url = URL(string: "https://meme-api.herokuapp.com/gimme/1") else{return}
-
-        let task = URLSession.shared.dataTask(with: url){
-            data, response, error in
+    func decodeAPI(from url: String) {
+        let task = URLSession.shared.dataTask(with: URL(string: url)!, completionHandler: { data, response, error in
             
-            let decoder = JSONDecoder()
-
-            if let data = data{
-                do{
-                    let tasks = try decoder.decode([Meme].self, from: data)
-                    tasks.forEach{ i in
-                        print(i.memes[0].title)
-                    }
-                }catch{
-                    print(error)
-                }
+            guard let data = data, error == nil else {
+                print("Oops smth went wrong")
+                return
             }
-        }
+            
+            var result: Meme?
+            do {
+                result = try JSONDecoder().decode(Meme.self, from: data)
+            }
+            catch {
+                print("Failed converting data \(error.localizedDescription)")
+            }
+            
+            guard let json = result else {
+                return
+            }
+            
+            memeUrl = json.memes[0].url
+        })
+            
         task.resume()
-
     }
     
     var body: some View {
         VStack(alignment: .leading) {
+            AsyncImage(url: URL(string: memeUrl))
             Button {
-                self.incr+=1
-                decodeAPI()
+                decodeAPI(from: url)
             } label: {
-                Text("✨")
-                    .padding(10)
+                Text("Meme me !")
+                    .padding(1)
             }
             .contentShape(Rectangle())
-            Text("Number \(incr)")
-                .padding(10)
             Text("\(testText)")
                 .padding(10)
 
